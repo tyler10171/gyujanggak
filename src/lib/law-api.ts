@@ -176,25 +176,26 @@ export async function getLawHistory(
   return amendments;
 }
 
-// 개정 이유 조회
+// 개정 이유 조회 - 법령 본문 내 <제개정이유> 태그에서 추출
 export async function getRevisionReason(
   lawId: string
 ): Promise<string> {
-  const url = `${BASE_URL}/lawService.do?OC=${LAW_API_OC}&target=rsn&type=XML&MST=${lawId}`;
+  const url = `${BASE_URL}/lawService.do?OC=${LAW_API_OC}&target=law&type=XML&MST=${lawId}`;
 
   const res = await fetch(url);
   const text = await res.text();
   if (!text.trim()) return "개정 이유 정보가 없습니다.";
 
-  const parsed = parseXml(text);
+  // CDATA 내용을 합쳐서 텍스트 추출
+  const reasonMatch = text.match(/<제개정이유내용>([\s\S]*?)<\/제개정이유내용>/);
+  if (!reasonMatch) return "개정 이유 정보가 없습니다.";
 
-  // 다양한 응답 구조 처리
-  const root = parsed?.법령 || parsed?.개정이유문 || parsed;
-  const reason =
-    root?.개정이유?.개정이유내용 ||
-    root?.개정이유 ||
-    root?.reason ||
-    "";
+  const reasonRaw = reasonMatch[1];
+  // CDATA 블록에서 텍스트만 추출
+  const cdataContents = [...reasonRaw.matchAll(/<!\[CDATA\[([\s\S]*?)\]\]>/g)]
+    .map((m) => m[1])
+    .join("")
+    .trim();
 
-  return toStr(reason) || "개정 이유 정보가 없습니다.";
+  return cdataContents || "개정 이유 정보가 없습니다.";
 }
