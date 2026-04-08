@@ -27,12 +27,18 @@ export interface LawArticle {
 
 // 개정 연혁
 export interface Amendment {
+  commitHash?: string;
   lawId: string;
   amendmentType: string;
   promulgationDate: string;
   promulgationNumber: string;
   enforcementDate: string;
   lawName: string;
+  links?: {
+    fullText?: string;
+    amendment?: string;
+    comparison?: string;
+  };
 }
 
 // 개정 이유

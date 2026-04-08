@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchLaws } from "@/lib/law-api";
+import { searchLawsGit } from "@/lib/git-law";
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q") || "";
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await searchLaws(query, page);
+    const data = await searchLawsGit(query, page);
     return NextResponse.json(data);
   } catch (error) {
     console.error("Law search error:", error);

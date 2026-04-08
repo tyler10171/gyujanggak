@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRevisionReason } from "@/lib/law-api";
 
+// 개정이유는 법제처 API에서 가져옴 (legalize-kr에는 없음)
 export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id") || "";
   if (!id) {

@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getLawHistory } from "@/lib/law-api";
+import { getLawHistoryGit } from "@/lib/git-law";
 
 export async function GET(request: NextRequest) {
-  const id = request.nextUrl.searchParams.get("id") || "";
-  if (!id) {
+  const dirName = request.nextUrl.searchParams.get("id") || "";
+  const fileType = request.nextUrl.searchParams.get("type") || "법률";
+
+  if (!dirName) {
     return NextResponse.json({ error: "법령 ID가 필요합니다" }, { status: 400 });
   }
 
   try {
-    const amendments = await getLawHistory(id);
+    const amendments = await getLawHistoryGit(dirName, fileType);
     return NextResponse.json({ amendments });
   } catch (error) {
     console.error("Law history error:", error);

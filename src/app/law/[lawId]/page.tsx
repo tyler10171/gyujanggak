@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Clock, GitCompareArrows } from "lucide-react";
+import { ArrowLeft, Clock, GitCompareArrows, ExternalLink } from "lucide-react";
 import type { LawDetail } from "@/lib/types";
 
 function formatDate(date: string): string {
@@ -11,19 +11,32 @@ function formatDate(date: string): string {
   return `${date.slice(0, 4)}.${date.slice(4, 6)}.${date.slice(6, 8)}`;
 }
 
+interface ExtendedDetail extends LawDetail {
+  markdownBody?: string;
+  mst?: string;
+  department?: string;
+  source?: string;
+}
+
 export default function LawDetailPage() {
   const params = useParams();
-  const lawId = params.lawId as string;
-  const [law, setLaw] = useState<LawDetail | null>(null);
+  const lawId = decodeURIComponent(params.lawId as string);
+  const [law, setLaw] = useState<ExtendedDetail | null>(null);
+  const [files, setFiles] = useState<string[]>([]);
+  const [activeFile, setActiveFile] = useState("법률");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/law-detail?id=${lawId}`)
+    setLoading(true);
+    fetch(`/api/law-detail?id=${encodeURIComponent(lawId)}&type=${encodeURIComponent(activeFile)}`)
       .then((r) => r.json())
-      .then((data) => setLaw(data.detail))
+      .then((data) => {
+        setLaw(data.detail);
+        if (data.files) setFiles(data.files);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [lawId]);
+  }, [lawId, activeFile]);
 
   if (loading) {
     return <div className="text-slate-400 py-12 text-center">법령 조회 중...</div>;
@@ -52,6 +65,9 @@ export default function LawDetailPage() {
           <span className="text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 font-medium">
             {law.lawType}
           </span>
+          {law.department && (
+            <span className="text-xs text-slate-400">{law.department}</span>
+          )}
         </div>
         <h2 className="text-2xl font-bold mb-3">{law.lawName}</h2>
         <div className="flex gap-4 text-sm text-slate-500">
@@ -59,22 +75,52 @@ export default function LawDetailPage() {
           <span>시행일: {formatDate(law.enforcementDate)}</span>
         </div>
 
+        {/* 파일 유형 탭 */}
+        {files.length > 1 && (
+          <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
+            {files.map((f) => (
+              <button
+                key={f}
+                onClick={() => setActiveFile(f)}
+                className={`text-sm px-4 py-1.5 rounded-lg transition-colors ${
+                  activeFile === f
+                    ? "bg-indigo-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* 액션 버튼 */}
         <div className="flex gap-3 mt-4 pt-4 border-t border-slate-100">
           <Link
-            href={`/law/${lawId}/history`}
+            href={`/law/${encodeURIComponent(lawId)}/history?type=${encodeURIComponent(activeFile)}`}
             className="flex items-center gap-2 text-sm bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg hover:bg-indigo-100 transition-colors"
           >
             <Clock size={16} />
             개정 연혁 보기
           </Link>
           <Link
-            href={`/law/${lawId}/compare`}
+            href={`/law/${encodeURIComponent(lawId)}/compare?type=${encodeURIComponent(activeFile)}`}
             className="flex items-center gap-2 text-sm bg-slate-50 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors"
           >
             <GitCompareArrows size={16} />
             조문 비교하기
           </Link>
+          {law.source && (
+            <a
+              href={law.source}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm bg-slate-50 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+            >
+              <ExternalLink size={16} />
+              법제처 원문
+            </a>
+          )}
         </div>
       </div>
 
@@ -96,15 +142,19 @@ export default function LawDetailPage() {
                     </span>
                   )}
                 </div>
-                <p className="text-sm leading-[1.8] text-slate-700 whitespace-pre-wrap pl-4">
+                <div className="text-sm leading-[1.8] text-slate-700 whitespace-pre-wrap pl-4">
                   {article.articleContent}
-                </p>
+                </div>
               </div>
             ))}
           </div>
+        ) : law.markdownBody ? (
+          <div className="prose prose-slate prose-sm max-w-none whitespace-pre-wrap text-sm leading-[1.8]">
+            {law.markdownBody}
+          </div>
         ) : (
           <p className="text-slate-400 text-sm">
-            법령 본문을 불러올 수 없습니다. API 인증키를 확인해주세요.
+            법령 본문을 불러올 수 없습니다.
           </p>
         )}
       </div>

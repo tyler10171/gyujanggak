@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, GitCompareArrows } from "lucide-react";
 import { diffWords } from "diff";
@@ -85,29 +85,29 @@ function DiffText({ oldText, newText }: { oldText: string; newText: string }) {
 
 export default function ComparePage() {
   const params = useParams();
-  const lawId = params.lawId as string;
+  const searchParams = useSearchParams();
+  const lawId = decodeURIComponent(params.lawId as string);
+  const fileType = searchParams.get("type") || "법률";
   const [amendments, setAmendments] = useState<Amendment[]>([]);
   const [versionA, setVersionA] = useState("");
   const [versionB, setVersionB] = useState("");
-  const [lawA, setLawA] = useState<LawDetail | null>(null);
-  const [lawB, setLawB] = useState<LawDetail | null>(null);
   const [diffs, setDiffs] = useState<ArticleDiff[]>([]);
   const [loading, setLoading] = useState(false);
   const [showOnlyChanged, setShowOnlyChanged] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/law-history?id=${lawId}`)
+    fetch(`/api/law-history?id=${encodeURIComponent(lawId)}&type=${encodeURIComponent(fileType)}`)
       .then((r) => r.json())
       .then((data) => {
-        const list = data.amendments || [];
+        const list: Amendment[] = data.amendments || [];
         setAmendments(list);
         if (list.length >= 2) {
-          setVersionA(list[1].lawId);
-          setVersionB(list[0].lawId);
+          setVersionA(list[1].commitHash || "");
+          setVersionB(list[0].commitHash || "");
         }
       })
       .catch(console.error);
-  }, [lawId]);
+  }, [lawId, fileType]);
 
   async function handleCompare() {
     if (!versionA || !versionB) return;
@@ -115,14 +115,11 @@ export default function ComparePage() {
 
     try {
       const [resA, resB] = await Promise.all([
-        fetch(`/api/law-detail?id=${versionA}`),
-        fetch(`/api/law-detail?id=${versionB}`),
+        fetch(`/api/law-detail?id=${encodeURIComponent(lawId)}&type=${encodeURIComponent(fileType)}&commit=${versionA}`),
+        fetch(`/api/law-detail?id=${encodeURIComponent(lawId)}&type=${encodeURIComponent(fileType)}&commit=${versionB}`),
       ]);
       const dataA = await resA.json();
       const dataB = await resB.json();
-
-      setLawA(dataA.detail);
-      setLawB(dataB.detail);
 
       if (dataA.detail && dataB.detail) {
         setDiffs(compareArticles(dataA.detail.articles, dataB.detail.articles));
@@ -142,7 +139,7 @@ export default function ComparePage() {
     <div className="max-w-5xl">
       <div className="flex items-center gap-4 mb-6">
         <Link
-          href={`/law/${lawId}`}
+          href={`/law/${encodeURIComponent(lawId)}`}
           className="flex items-center gap-1 text-sm text-slate-500 hover:text-indigo-600 transition-colors"
         >
           <ArrowLeft size={16} />
@@ -168,8 +165,8 @@ export default function ComparePage() {
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
             >
               <option value="">선택하세요</option>
-              {amendments.map((a, i) => (
-                <option key={i} value={a.lawId}>
+              {amendments.map((a) => (
+                <option key={a.commitHash} value={a.commitHash || ""}>
                   {formatDate(a.promulgationDate)} ({a.amendmentType})
                 </option>
               ))}
@@ -186,8 +183,8 @@ export default function ComparePage() {
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
             >
               <option value="">선택하세요</option>
-              {amendments.map((a, i) => (
-                <option key={i} value={a.lawId}>
+              {amendments.map((a) => (
+                <option key={a.commitHash} value={a.commitHash || ""}>
                   {formatDate(a.promulgationDate)} ({a.amendmentType})
                 </option>
               ))}
@@ -293,9 +290,9 @@ export default function ComparePage() {
         </div>
       )}
 
-      {lawA && lawB && diffs.length === 0 && !loading && (
+      {diffs.length === 0 && !loading && versionA && versionB && (
         <div className="text-center py-12 text-slate-400">
-          두 버전 간 차이가 없습니다
+          비교하기 버튼을 눌러주세요
         </div>
       )}
     </div>

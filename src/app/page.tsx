@@ -16,6 +16,8 @@ function getLawTypeBadge(type: string) {
     대통령령: "bg-amber-100 text-amber-700",
     총리령: "bg-green-100 text-green-700",
     부령: "bg-slate-100 text-slate-700",
+    시행령: "bg-amber-100 text-amber-700",
+    시행규칙: "bg-green-100 text-green-700",
   };
   return colors[type] || "bg-slate-100 text-slate-600";
 }
@@ -61,8 +63,10 @@ export default function Home() {
             <Scale size={48} className="mx-auto mb-4 text-indigo-600" />
             <h2 className="text-3xl font-bold mb-2">법령을 검색하세요</h2>
             <p className="text-slate-500">
-              법령명을 입력하면 본문, 개정 연혁, 변동 이유를 한눈에 확인할 수
-              있습니다
+              3,000여 개 대한민국 법령의 본문, 개정 연혁, 조문 비교를 한눈에
+            </p>
+            <p className="text-xs text-slate-400 mt-2">
+              Powered by legalize-kr (Git 기반 법령 아카이브)
             </p>
           </div>
         )}
@@ -102,7 +106,7 @@ export default function Home() {
                 {results.map((law) => (
                   <Link
                     key={law.lawId}
-                    href={`/law/${law.lawId}`}
+                    href={`/law/${encodeURIComponent(law.lawId)}`}
                     className="block bg-white rounded-xl p-5 shadow-sm border border-slate-100 hover:border-indigo-300 hover:shadow-md transition-all group"
                   >
                     <div className="flex items-start justify-between">
